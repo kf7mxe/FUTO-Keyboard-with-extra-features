@@ -2,8 +2,7 @@ package org.futo.inputmethod.latin.uix.settings.pages
 
 import android.preference.PreferenceManager
 import androidx.compose.foundation.layout.width
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.booleanResource
@@ -23,16 +22,7 @@ import org.futo.inputmethod.latin.uix.SHOW_EMOJI_SUGGESTIONS
 import org.futo.inputmethod.latin.uix.SettingsKey
 import org.futo.inputmethod.latin.uix.actions.AllActions
 import org.futo.inputmethod.latin.uix.actions.ClipboardHistoryEnabled
-import org.futo.inputmethod.latin.uix.settings.DropDownPicker
-import org.futo.inputmethod.latin.uix.settings.ScreenTitle
-import org.futo.inputmethod.latin.uix.settings.ScrollableList
-import org.futo.inputmethod.latin.uix.settings.SettingItem
-import org.futo.inputmethod.latin.uix.settings.SettingSlider
-import org.futo.inputmethod.latin.uix.settings.SettingSliderSharedPrefsInt
-import org.futo.inputmethod.latin.uix.settings.SettingToggleDataStore
-import org.futo.inputmethod.latin.uix.settings.SettingToggleSharedPrefs
-import org.futo.inputmethod.latin.uix.settings.useDataStore
-import org.futo.inputmethod.latin.uix.settings.useSharedPrefsInt
+import org.futo.inputmethod.latin.uix.settings.*
 import kotlin.math.roundToInt
 
 val vibrationDurationSetting = SettingsKey(
@@ -45,6 +35,9 @@ val vibrationDurationSetting = SettingsKey(
 fun TypingScreen(navController: NavHostController = rememberNavController()) {
     val context = LocalContext.current
     val (vibration, _) = useDataStore(key = vibrationDurationSetting.key, default = vibrationDurationSetting.default)
+
+    var soundOn by remember {mutableStateOf(false)}
+
 
     LaunchedEffect(vibration) {
         val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(context)
@@ -124,12 +117,13 @@ fun TypingScreen(navController: NavHostController = rememberNavController()) {
         SettingToggleSharedPrefs(
             title = stringResource(R.string.sound_on_keypress),
             key = Settings.PREF_SOUND_ON,
-            default = booleanResource(R.bool.config_default_sound_enabled)
+            default = booleanResource(R.bool.config_default_sound_enabled),
+            additionalSettings = { SoundSettingsSection() }
         )
         SettingToggleSharedPrefs(
             title = stringResource(R.string.popup_on_keypress),
             key = Settings.PREF_POPUP_ON,
-            default = booleanResource(R.bool.config_default_key_preview_popup)
+            default = booleanResource(R.bool.config_default_key_preview_popup),
         )
 
         SettingSlider(

@@ -135,6 +135,9 @@ public class SettingsValues {
         mAutoCap = prefs.getBoolean(Settings.PREF_AUTO_CAP, true);
         mVibrateOn = Settings.readVibrationEnabled(prefs, res);
         mSoundOn = Settings.readKeypressSoundEnabled(prefs, res);
+
+
+
         mKeyPreviewPopupOn = Settings.readKeyPreviewPopupEnabled(prefs, res);
         mSlidingKeyInputPreviewEnabled = prefs.getBoolean(
                 DebugSettings.PREF_SLIDING_KEY_INPUT_PREVIEW, true);

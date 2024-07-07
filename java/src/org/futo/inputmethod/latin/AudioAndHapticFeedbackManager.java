@@ -17,13 +17,21 @@
 package org.futo.inputmethod.latin;
 
 import android.content.Context;
+import android.content.res.AssetFileDescriptor;
 import android.media.AudioManager;
+import android.media.SoundPool;
+import android.net.Uri;
 import android.os.Vibrator;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
 
 import org.futo.inputmethod.latin.common.Constants;
 import org.futo.inputmethod.latin.settings.SettingsValues;
+
+import java.io.FileNotFoundException;
+
+import static org.futo.inputmethod.latin.uix.settings.ComponentsKt.loadSoundPath;
+import static org.futo.inputmethod.latin.uix.settings.ComponentsKt.loadSoundUri;
 
 /**
  * This class gathers audio feedback and haptic feedback functions.
@@ -35,8 +43,13 @@ public final class AudioAndHapticFeedbackManager {
     private AudioManager mAudioManager;
     private Vibrator mVibrator;
 
+    private SoundPool mSoundPool;
+    private int mDeleteSound, mEnterSound, mSpaceSound, mKeySound;
+
     private SettingsValues mSettingsValues;
     private boolean mSoundOn;
+
+    private Context mContext;
 
     private static final AudioAndHapticFeedbackManager sInstance =
             new AudioAndHapticFeedbackManager();
@@ -56,6 +69,9 @@ public final class AudioAndHapticFeedbackManager {
     private void initInternal(final Context context) {
         mAudioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         mVibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+        mSoundPool = new SoundPool(5, AudioManager.STREAM_MUSIC, 0);
+        loadCustomSounds(context);
+        mContext = context;
     }
 
     public void performHapticAndAudioFeedback(final int code,
@@ -90,22 +106,44 @@ public final class AudioAndHapticFeedbackManager {
         if (!mSoundOn) {
             return;
         }
-        final int sound;
+        int sound = -1;
+        int customSound = -1;
         switch (code) {
         case Constants.CODE_DELETE:
-            sound = AudioManager.FX_KEYPRESS_DELETE;
+            if (mDeleteSound != -1) {
+                customSound = mDeleteSound;
+                break;
+            }
+                sound = AudioManager.FX_KEYPRESS_DELETE;
             break;
         case Constants.CODE_ENTER:
+            if (mEnterSound!= -1) {
+                customSound = mEnterSound;
+                break;
+            }
             sound = AudioManager.FX_KEYPRESS_RETURN;
             break;
         case Constants.CODE_SPACE:
+            if (mSpaceSound!= -1) {
+                customSound = mSpaceSound;
+                break;
+            }
             sound = AudioManager.FX_KEYPRESS_SPACEBAR;
             break;
         default:
+            if (mKeySound!= -1) {
+                customSound = mKeySound;
+                break;
+            }
             sound = AudioManager.FX_KEYPRESS_STANDARD;
             break;
         }
-        mAudioManager.playSoundEffect(sound, mSettingsValues.mKeypressSoundVolume);
+        if(customSound!= -1) {
+            mSoundPool.play(customSound, 1, 1, 0, 0, 1);
+        }
+        if (sound != -1) {
+            mAudioManager.playSoundEffect(sound, mSettingsValues.mKeypressSoundVolume);
+        }
     }
 
     public void performHapticFeedback(final View viewToPerformHapticFeedbackOn) {
@@ -126,9 +164,43 @@ public final class AudioAndHapticFeedbackManager {
     public void onSettingsChanged(final SettingsValues settingsValues) {
         mSettingsValues = settingsValues;
         mSoundOn = reevaluateIfSoundIsOn();
+        loadCustomSounds(mContext);
     }
 
     public void onRingerModeChanged() {
         mSoundOn = reevaluateIfSoundIsOn();
     }
+
+    private int loadSoundFromUri(Context context, String key) {
+        Uri soundUri = loadSoundUri(context, key);
+        if (soundUri != null) {
+            try {
+                AssetFileDescriptor afd = context.getContentResolver().openAssetFileDescriptor(soundUri, "r");
+                return mSoundPool.load(afd, 1);
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+        return -1; // Invalid sound
+    }
+
+    private void loadCustomSounds(Context context) {
+        mDeleteSound = loadSoundFromPath(context, "delete_sound");
+        mEnterSound = loadSoundFromPath(context, "enter_sound");
+        mSpaceSound = loadSoundFromPath(context, "space_sound");
+        mKeySound = loadSoundFromPath(context, "key_sound");
+    }
+
+    private int loadSoundFromPath(Context context, String key) {
+        String soundPath = loadSoundPath(context, key);
+        if (soundPath != null &&!soundPath.isEmpty()) {
+            try {
+                return mSoundPool.load(soundPath, 1);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return -1; // Invalid sound
+    }
+
 }

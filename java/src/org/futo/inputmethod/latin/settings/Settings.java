@@ -53,6 +53,8 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_VIBRATE_ON = "vibrate_on";
     public static final String PREF_SOUND_ON = "sound_on";
     public static final String PREF_POPUP_ON = "popup_on";
+
+
     // PREF_VOICE_MODE_OBSOLETE is obsolete. Use PREF_VOICE_INPUT_KEY instead.
     public static final String PREF_VOICE_MODE_OBSOLETE = "voice_mode";
     public static final String PREF_VOICE_INPUT_KEY = "pref_voice_input_key";
@@ -208,6 +210,8 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
         return prefs.getBoolean(PREF_SOUND_ON,
                 res.getBoolean(R.bool.config_default_sound_enabled));
     }
+
+
 
     public static boolean readVibrationEnabled(final SharedPreferences prefs,
             final Resources res) {

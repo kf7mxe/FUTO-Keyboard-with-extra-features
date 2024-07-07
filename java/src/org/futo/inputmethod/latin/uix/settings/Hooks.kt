@@ -24,7 +24,7 @@ import org.futo.inputmethod.latin.uix.SettingsKey
 import org.futo.inputmethod.latin.uix.dataStore
 import org.futo.inputmethod.latin.uix.getSetting
 
-data class DataStoreItem<T>(val value: T, val setValue: (T) -> Job)
+data class DataStoreItem<T>(var value: T, val setValue: (T) -> Job)
 
 @Composable
 fun <T> useDataStoreValueBlocking(key: Preferences.Key<T>, default: T): T {
@@ -138,6 +138,25 @@ fun useSharedPrefsBool(key: String, default: Boolean): DataStoreItem<Boolean> {
             }
         }
     )
+}
+
+@Composable
+fun useSharedPrefsString(key: String, default: String): DataStoreItem<String>? {
+    val dataStoreResult = useSharedPrefsGeneric(key, default,
+        get = { sharedPreferences, k, d ->
+            sharedPreferences.getString(k, d) ?: ""
+        },
+        put = { sharedPreferences, k, v ->
+            sharedPreferences.edit {
+                putString(k, v)
+            }
+        }
+    )
+    if (dataStoreResult.value.isNotEmpty() && dataStoreResult.value!= default) {
+        return dataStoreResult
+    } else {
+        return null
+    }
 }
 
 @Composable

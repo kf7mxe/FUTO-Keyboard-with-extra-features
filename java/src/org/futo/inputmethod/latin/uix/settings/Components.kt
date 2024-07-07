@@ -1,16 +1,16 @@
 package org.futo.inputmethod.latin.uix.settings
 
+import android.annotation.SuppressLint
+import android.content.Context
+import android.database.Cursor
+import android.net.Uri
+import android.preference.PreferenceManager
+import android.provider.OpenableColumns
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.rememberScrollState
@@ -20,22 +20,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -56,11 +42,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.text
-import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.*
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextRange
@@ -68,12 +51,17 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.edit
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import org.futo.inputmethod.latin.R
 import org.futo.inputmethod.latin.uix.SettingsKey
 import org.futo.inputmethod.latin.uix.getSettingBlocking
 import org.futo.inputmethod.latin.uix.theme.Typography
+import java.io.File
+import java.io.FileOutputStream
 import kotlin.math.pow
+
 
 @Composable
 fun ScreenTitle(title: String, showBack: Boolean = false, navController: NavHostController = rememberNavController()) {
@@ -237,7 +225,7 @@ fun SettingToggleDataStoreItem(
     subtitle: String? = null,
     disabledSubtitle: String? = null,
     disabled: Boolean = false,
-    icon: (@Composable () -> Unit)? = null
+    icon: (@Composable () -> Unit)? = null,
 ) {
     val (enabled, setValue) = dataStoreItem
 
@@ -271,10 +259,19 @@ fun SettingToggleSharedPrefs(
     subtitle: String? = null,
     disabledSubtitle: String? = null,
     disabled: Boolean = false,
-    icon: (@Composable () -> Unit)? = null
+    icon: (@Composable () -> Unit)? = null,
+    additionalSettings: (@Composable () -> Unit)? = null
 ) {
+    val (enabled, setValue) = useSharedPrefsBool(key, default)
+    Column {
     SettingToggleDataStoreItem(
         title, useSharedPrefsBool(key, default), subtitle, disabledSubtitle, disabled, icon)
+        if (enabled) {
+            if (additionalSettings != null) {
+                additionalSettings()
+            }
+        }
+        }
 }
 
 @Composable
@@ -406,6 +403,154 @@ private fun<T: Number> SettingSliderForDataStoreItem(
                 steps = steps
             )
         }
+    }
+}
+
+@Composable
+fun SoundSettingsSection(){
+
+    val context = LocalContext.current
+    val currentSoundDeleteSound = useSharedPrefsString("delete_sound", "default")
+    val currentSoundEnterSound = useSharedPrefsString("enter_sound", "default")
+    val currentSoundSpaceSound = useSharedPrefsString("space_sound", "default")
+    val currentSoundKeySound = useSharedPrefsString("key_sound", "default")
+    // align column to right
+    Column(modifier = Modifier.padding(96.dp, 0.dp, 0.dp, 16.dp)) {
+        SoundSettingItem(
+            title = "Delete Sound",
+            key = "delete_sound",
+            currentSound = currentSoundDeleteSound,
+        )
+
+        SoundSettingItem(
+            title = "Enter Sound",
+            key = "enter_sound",
+            currentSound = currentSoundEnterSound,
+        )
+
+        SoundSettingItem(
+            title = "Space Sound",
+            key = "space_sound",
+            currentSound = currentSoundSpaceSound,
+        )
+
+        SoundSettingItem(
+            title = "Key Sound",
+            key = "key_sound",
+            currentSound = currentSoundKeySound,
+        )
+    }
+}
+
+fun saveSoundPath(context: Context, key: String, path: String) {
+    val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(context)
+    sharedPrefs.edit {
+        putString(key, path)
+    }
+}
+
+fun loadSoundUri(context: Context, key: String): Uri? {
+    val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(context)
+    val uriString = sharedPrefs.getString(key, null)
+    return uriString?.let { Uri.parse(it) }
+}
+
+
+fun copyFileToInternalStorage(context: Context, uri: Uri): String {
+    val inputStream = context.contentResolver.openInputStream(uri)
+    val fileName = "${getFileName(context,uri)}" // Use appropriate file extension
+    val file = File(context.filesDir, fileName)
+
+    inputStream.use { input ->
+        FileOutputStream(file).use { output ->
+            input?.copyTo(output)
+        }
+    }
+    return file.absolutePath
+}
+
+fun loadSoundPath(context: Context, key: String): String? {
+    val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(context)
+    return sharedPrefs.getString(key, null)
+}
+
+@SuppressLint("Range")
+fun getFileName(context:Context, uri: Uri): String? {
+    var result: String? = null
+    if (uri.scheme == "content") {
+        val cursor: Cursor? = context.contentResolver.query(uri, null, null, null, null)
+        try {
+            if (cursor != null && cursor.moveToFirst() && cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME) > 0) {
+                result = cursor.getString(cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME))
+            }
+        } finally {
+            if (cursor != null) {
+                cursor.close()
+            }
+        }
+    }
+    if (result == null) {
+        result = uri.path
+        val cut = result!!.lastIndexOf('/')
+        if (cut != -1) {
+            result = result.substring(cut + 1)
+        }
+    }
+    return result
+}
+
+
+@Composable
+fun SoundSettingItem(
+    title: String,
+    key: String,
+    currentSound: DataStoreItem<String>?,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            val newFilePath = copyFileToInternalStorage(context, it)
+            saveSoundPath(context, key, newFilePath)
+        }
+    }
+
+    Text(text = title, style = MaterialTheme.typography.titleMedium)
+    Row( verticalAlignment = Alignment.CenterVertically
+    )
+
+        {
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(text = "Current Sound: ${currentSound.let{
+                if (it == null){
+                    "default"
+                } else {
+                   "" 
+                }
+            }}", style = MaterialTheme.typography.bodyMedium)
+            if (currentSound != null) {
+            InputChip(
+                onClick = {
+                    currentSound.setValue("")
+                },
+                label = { Text(currentSound.value.substringAfterLast("/")?: "default") },
+                selected = currentSound.value.isNotEmpty(),
+                trailingIcon = {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Close",
+                        Modifier.size(InputChipDefaults.AvatarSize)
+                    )
+
+                }
+            )
+        }
+            Spacer(modifier = Modifier.width(16.dp))
+                Button(onClick = { launcher.launch("audio/*") }) {
+                    Icon(painterResource((R.drawable.attach_file)), "Copy")
+                }
     }
 }
 
