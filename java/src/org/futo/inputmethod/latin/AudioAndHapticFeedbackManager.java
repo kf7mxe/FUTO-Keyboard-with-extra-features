@@ -29,9 +29,9 @@ import org.futo.inputmethod.latin.common.Constants;
 import org.futo.inputmethod.latin.settings.SettingsValues;
 
 import java.io.FileNotFoundException;
+import java.util.List;
 
-import static org.futo.inputmethod.latin.uix.settings.ComponentsKt.loadSoundPath;
-import static org.futo.inputmethod.latin.uix.settings.ComponentsKt.loadSoundUri;
+import static org.futo.inputmethod.latin.uix.settings.ComponentsKt.*;
 
 /**
  * This class gathers audio feedback and haptic feedback functions.
@@ -44,7 +44,7 @@ public final class AudioAndHapticFeedbackManager {
     private Vibrator mVibrator;
 
     private SoundPool mSoundPool;
-    private int mDeleteSound, mEnterSound, mSpaceSound, mKeySound;
+    private List<Integer> mDeleteSound, mEnterSound, mSpaceSound, mKeySound;
 
     private SettingsValues mSettingsValues;
     private boolean mSoundOn;
@@ -69,7 +69,7 @@ public final class AudioAndHapticFeedbackManager {
     private void initInternal(final Context context) {
         mAudioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         mVibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
-        mSoundPool = new SoundPool(5, AudioManager.STREAM_MUSIC, 0);
+        mSoundPool = new SoundPool(20, AudioManager.FX_KEY_CLICK, 0);
         loadCustomSounds(context);
         mContext = context;
     }
@@ -110,29 +110,54 @@ public final class AudioAndHapticFeedbackManager {
         int customSound = -1;
         switch (code) {
         case Constants.CODE_DELETE:
-            if (mDeleteSound != -1) {
-                customSound = mDeleteSound;
+            if (mDeleteSound != null) {
+                // random sound is used for delete, so we need to load it only once
+                int max = mDeleteSound.size();
+                if (max == 0) {
+                    return;
+                }
+                int randomIndex = (int) (Math.random() * max);
+                customSound = mDeleteSound.get(randomIndex);
                 break;
             }
                 sound = AudioManager.FX_KEYPRESS_DELETE;
             break;
         case Constants.CODE_ENTER:
-            if (mEnterSound!= -1) {
-                customSound = mEnterSound;
+            if (mEnterSound != null) {
+                // random sound is used for delete, so we need to load it only once
+                int max = mEnterSound.size();
+                if (max == 0) {
+                    return;
+                }
+                int randomIndex = (int) (Math.random() * max);
+                customSound = mEnterSound.get(randomIndex);
                 break;
             }
+
             sound = AudioManager.FX_KEYPRESS_RETURN;
             break;
         case Constants.CODE_SPACE:
-            if (mSpaceSound!= -1) {
-                customSound = mSpaceSound;
+            if (mSpaceSound != null) {
+                // random sound is used for delete, so we need to load it only once
+                int max = mSpaceSound.size();
+                if (max == 0) {
+                    return;
+                }
+                int randomIndex = (int) (Math.random() * max);
+                customSound = mSpaceSound.get(randomIndex);
                 break;
             }
             sound = AudioManager.FX_KEYPRESS_SPACEBAR;
             break;
         default:
-            if (mKeySound!= -1) {
-                customSound = mKeySound;
+            if (mKeySound != null) {
+                // random sound is used for delete, so we need to load it only once
+                int max = mKeySound.size();
+                if (max == 0) {
+                    return;
+                }
+                int randomIndex = (int) (Math.random() * max);
+                customSound = mKeySound.get(randomIndex);
                 break;
             }
             sound = AudioManager.FX_KEYPRESS_STANDARD;
@@ -191,16 +216,20 @@ public final class AudioAndHapticFeedbackManager {
         mKeySound = loadSoundFromPath(context, "key_sound");
     }
 
-    private int loadSoundFromPath(Context context, String key) {
-        String soundPath = loadSoundPath(context, key);
-        if (soundPath != null &&!soundPath.isEmpty()) {
+    private List<Integer> loadSoundFromPath(Context context, String key) {
+        List<String> soundPaths = loadSoundPaths(context, key);
+        if (soundPaths != null &&!soundPaths.isEmpty()) {
             try {
-                return mSoundPool.load(soundPath, 1);
+                List<Integer> soundIds = new java.util.ArrayList<Integer>();
+                for (int i = 0; i < soundPaths.size(); i++) {
+                    soundIds.add(loadSoundFromUri(context, soundPaths.get(i)));
+                }
+                return soundIds;
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-        return -1; // Invalid sound
+        return null; // Invalid sound
     }
 
 }

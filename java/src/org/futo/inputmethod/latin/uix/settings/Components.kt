@@ -419,33 +419,34 @@ fun SoundSettingsSection(){
         SoundSettingItem(
             title = "Delete Sound",
             key = "delete_sound",
-            currentSound = currentSoundDeleteSound,
+            currentSounds = currentSoundDeleteSound,
         )
 
         SoundSettingItem(
             title = "Enter Sound",
             key = "enter_sound",
-            currentSound = currentSoundEnterSound,
+            currentSounds = currentSoundEnterSound,
         )
 
         SoundSettingItem(
             title = "Space Sound",
             key = "space_sound",
-            currentSound = currentSoundSpaceSound,
+            currentSounds = currentSoundSpaceSound,
         )
 
         SoundSettingItem(
             title = "Key Sound",
             key = "key_sound",
-            currentSound = currentSoundKeySound,
+            currentSounds = currentSoundKeySound,
         )
     }
 }
 
-fun saveSoundPath(context: Context, key: String, path: String) {
+fun saveSoundPath(context: Context, key: String, paths: String) {
     val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(context)
+    val currentPath = sharedPrefs.getString(key, null)
     sharedPrefs.edit {
-        putString(key, path)
+        putString(key, paths)
     }
 }
 
@@ -469,9 +470,11 @@ fun copyFileToInternalStorage(context: Context, uri: Uri): String {
     return file.absolutePath
 }
 
-fun loadSoundPath(context: Context, key: String): String? {
+fun loadSoundPaths(context: Context, key: String): List<String>? {
     val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(context)
-    return sharedPrefs.getString(key, null)
+    val value = sharedPrefs.getString(key, null)
+    val parsedValue = value?.split(",")
+    return parsedValue
 }
 
 @SuppressLint("Range")
@@ -500,11 +503,12 @@ fun getFileName(context:Context, uri: Uri): String? {
 }
 
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SoundSettingItem(
     title: String,
     key: String,
-    currentSound: DataStoreItem<String>?,
+    currentSounds: DataStoreItem<String>?,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -513,44 +517,52 @@ fun SoundSettingItem(
     ) { uri: Uri? ->
         uri?.let {
             val newFilePath = copyFileToInternalStorage(context, it)
-            saveSoundPath(context, key, newFilePath)
+            val parsedCurrentSounds = currentSounds?.value?.split(",")
+            val paths = parsedCurrentSounds?.plus(newFilePath) ?: listOf(newFilePath)
+            saveSoundPath(context, key, paths.toString())
         }
     }
 
     Text(text = title, style = MaterialTheme.typography.titleMedium)
-    Row( verticalAlignment = Alignment.CenterVertically
-    )
-
-        {
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(text = "Current Sound: ${currentSound.let{
-                if (it == null){
-                    "default"
-                } else {
-                   "" 
+    FlowRow( modifier = Modifier.fillMaxWidth() )
+    {
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = "Current Sound: ${
+                currentSounds.let {
+                    if (it == null) {
+                        "default"
+                    } else {
+                        ""
+                    }
                 }
-            }}", style = MaterialTheme.typography.bodyMedium)
-            if (currentSound != null) {
-            InputChip(
-                onClick = {
-                    currentSound.setValue("")
-                },
-                label = { Text(currentSound.value.substringAfterLast("/")?: "default") },
-                selected = currentSound.value.isNotEmpty(),
-                trailingIcon = {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = "Close",
-                        Modifier.size(InputChipDefaults.AvatarSize)
+            }", style = MaterialTheme.typography.bodyMedium
+        )
+        if (currentSounds != null) {
+            val currentSoundParsedStringArray: List<String> = currentSounds.value.split(",")
+                currentSoundParsedStringArray.mapIndexed { index, currentSound ->
+                    InputChip(
+                        onClick = {
+                            // remove current sound from list
+                            val newCurrentSounds = currentSounds.value.split(",").minus(currentSound) ?: listOf()
+                            currentSounds.setValue(newCurrentSounds.toString())
+                        },
+                        label = { Text(currentSound.substringAfterLast("/") ?: "default") },
+                        selected = currentSound.isNotEmpty(),
+                        trailingIcon = {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Close",
+                                Modifier.size(InputChipDefaults.AvatarSize)
+                            )
+                        }
                     )
-
                 }
-            )
         }
-            Spacer(modifier = Modifier.width(16.dp))
-                Button(onClick = { launcher.launch("audio/*") }) {
-                    Icon(painterResource((R.drawable.attach_file)), "Copy")
-                }
+        Spacer(modifier = Modifier.width(16.dp))
+        Button(onClick = { launcher.launch("audio/*") }) {
+            Icon(painterResource((R.drawable.attach_file)), "Copy")
+        }
     }
 }
 
