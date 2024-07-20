@@ -442,7 +442,7 @@ fun SoundSettingsSection(){
     }
 }
 
-fun saveSoundPath(context: Context, key: String, paths: String) {
+fun saveSoundPaths(context: Context, key: String, paths: String) {
     val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(context)
     val currentPath = sharedPrefs.getString(key, null)
     sharedPrefs.edit {
@@ -473,7 +473,7 @@ fun copyFileToInternalStorage(context: Context, uri: Uri): String {
 fun loadSoundPaths(context: Context, key: String): List<String>? {
     val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(context)
     val value = sharedPrefs.getString(key, null)
-    val parsedValue = value?.split(",")
+    val parsedValue = value?.replace("[","")?.replace("]","")?.split(",")
     return parsedValue
 }
 
@@ -517,9 +517,9 @@ fun SoundSettingItem(
     ) { uri: Uri? ->
         uri?.let {
             val newFilePath = copyFileToInternalStorage(context, it)
-            val parsedCurrentSounds = currentSounds?.value?.split(",")
+            val parsedCurrentSounds = currentSounds?.value?.replace("[","")?.replace("]","")?.split(",")
             val paths = parsedCurrentSounds?.plus(newFilePath) ?: listOf(newFilePath)
-            saveSoundPath(context, key, paths.toString())
+            saveSoundPaths(context, key, paths.toString())
         }
     }
 
@@ -539,12 +539,12 @@ fun SoundSettingItem(
             }", style = MaterialTheme.typography.bodyMedium
         )
         if (currentSounds != null) {
-            val currentSoundParsedStringArray: List<String> = currentSounds.value.split(",")
-                currentSoundParsedStringArray.mapIndexed { index, currentSound ->
+            val currentSoundParsedStringArray: List<String> = currentSounds.value.replace("[","").replace("]","") .split(",")
+            currentSoundParsedStringArray.mapIndexed { index, currentSound ->
                     InputChip(
                         onClick = {
                             // remove current sound from list
-                            val newCurrentSounds = currentSounds.value.split(",").minus(currentSound) ?: listOf()
+                            val newCurrentSounds = currentSounds.value.replace("[","").replace("]","").split(",").minus(currentSound) ?: listOf()
                             currentSounds.setValue(newCurrentSounds.toString())
                         },
                         label = { Text(currentSound.substringAfterLast("/") ?: "default") },

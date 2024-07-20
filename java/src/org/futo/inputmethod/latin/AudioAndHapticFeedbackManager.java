@@ -196,8 +196,8 @@ public final class AudioAndHapticFeedbackManager {
         mSoundOn = reevaluateIfSoundIsOn();
     }
 
-    private int loadSoundFromUri(Context context, String key) {
-        Uri soundUri = loadSoundUri(context, key);
+    private int loadSoundFromUri(Context context, String uriString) {
+        Uri soundUri = Uri.parse(uriString);
         if (soundUri != null) {
             try {
                 AssetFileDescriptor afd = context.getContentResolver().openAssetFileDescriptor(soundUri, "r");
