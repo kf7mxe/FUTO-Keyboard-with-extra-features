@@ -197,15 +197,11 @@ public final class AudioAndHapticFeedbackManager {
     }
 
     private int loadSoundFromUri(Context context, String uriString) {
-        Uri soundUri = Uri.parse(uriString);
-        if (soundUri != null) {
             try {
-                AssetFileDescriptor afd = context.getContentResolver().openAssetFileDescriptor(soundUri, "r");
-                return mSoundPool.load(afd, 1);
-            } catch (FileNotFoundException e) {
+                return mSoundPool.load(uriString, 1);
+            } catch (Exception e) {
                 e.printStackTrace();
             }
-        }
         return -1; // Invalid sound
     }
 
